@@ -7,3 +7,4 @@ with DAG(dag_id="hello_world", start_date=datetime(2025, 1, 1), schedule="@daily
         task_id="say_hello",
         bash_command="echo Hello from Airflow!"
     )
+#test
