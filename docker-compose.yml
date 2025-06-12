@@ -1,19 +1,53 @@
+version: '3.8'
+
 services:
-  postgres:
-    image: postgres:13
-    environment:
-      - POSTGRES_USER=airflow
-      - POSTGRES_PASSWORD=airflow
-      - POSTGRES_DB=airflow
-    ports:
-      - "5432:5432"
+  # ✅ Django
+  django-web:
+    build:
+      context: ./django-app
+    command: python manage.py runserver 0.0.0.0:8000
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./django-app:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=django-db
+      - DB_PORT=5432
+      - DB_NAME=django
+      - DB_USER=django
+      - DB_PASSWORD=12345
+    depends_on:
+      - django-db
+
+  # ✅ PostgreSQL for Django
+  django-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: django
+      POSTGRES_USER: django
+      POSTGRES_PASSWORD: 12345
+    volumes:
+      - django_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+
+  # ✅ PostgreSQL for Airflow
+  airflow-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "airflow"]
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
       interval: 5s
       retries: 5
 
+  # ✅ Redis
   redis:
     image: redis:latest
     ports:
@@ -24,99 +58,79 @@ services:
       timeout: 30s
       retries: 50
 
+  # ✅ Airflow Init
   airflow-init:
     image: apache/airflow:2.8.1
     depends_on:
-      - postgres
+      - airflow-db
+      - redis
     environment:
       - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
-      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@airflow-db/airflow
       - AIRFLOW__CELERY__BROKER_URL=redis://:@redis:6379/0
-      - AIRFLOW__CORE__LOAD_EXAMPLES=false
       - _AIRFLOW_DB_UPGRADE=true
       - _AIRFLOW_WWW_USER_CREATE=true
       - _AIRFLOW_WWW_USER_USERNAME=airflow
       - _AIRFLOW_WWW_USER_PASSWORD=airflow
-    command: version
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
-      - ./airflow/scripts:/opt/airflow/scripts
+    command: version
 
+  # ✅ Airflow Webserver
   airflow-webserver:
     image: apache/airflow:2.8.1
     depends_on:
-      - postgres
-      - redis
       - airflow-init
+    ports:
+      - "8080:8080"
     environment:
       - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
-      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@airflow-db/airflow
       - AIRFLOW__CELERY__BROKER_URL=redis://:@redis:6379/0
-      - AIRFLOW__CORE__FERNET_KEY=''
-      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
-      - AIRFLOW__CORE__LOAD_EXAMPLES=false
-      - AIRFLOW__API__AUTH_BACKEND=airflow.api.auth.backend.basic_auth
-      - _AIRFLOW_DB_UPGRADE=true
-      - _AIRFLOW_WWW_USER_CREATE=true
       - _AIRFLOW_WWW_USER_USERNAME=airflow
       - _AIRFLOW_WWW_USER_PASSWORD=airflow
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
-      - ./airflow/scripts:/opt/airflow/scripts
-    ports:
-      - "8080:8080"
     command: webserver
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
 
+  # ✅ Airflow Scheduler
   airflow-scheduler:
     image: apache/airflow:2.8.1
     depends_on:
       - airflow-webserver
     environment:
       - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
-      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@airflow-db/airflow
       - AIRFLOW__CELERY__BROKER_URL=redis://:@redis:6379/0
-      - AIRFLOW__CORE__FERNET_KEY=''
-      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
-      - AIRFLOW__CORE__LOAD_EXAMPLES=false
-      - AIRFLOW__API__AUTH_BACKEND=airflow.api.auth.backend.basic_auth
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
-      - ./airflow/scripts:/opt/airflow/scripts
     command: scheduler
 
+  # ✅ Airflow Worker
   airflow-worker:
     image: apache/airflow:2.8.1
     depends_on:
       - airflow-scheduler
     environment:
       - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
-      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+      - AIRFLOW__CELERY__RESULT_BACKEND=db+postgresql://airflow:airflow@airflow-db/airflow
       - AIRFLOW__CELERY__BROKER_URL=redis://:@redis:6379/0
-      - AIRFLOW__CORE__FERNET_KEY=''
-      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
-      - AIRFLOW__CORE__LOAD_EXAMPLES=false
-      - AIRFLOW__API__AUTH_BACKEND=airflow.api.auth.backend.basic_auth
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
-      - ./airflow/scripts:/opt/airflow/scripts
     command: celery worker
 
 volumes:
-  postgres_data: 
+  django_postgres_data:
+  airflow_postgres_data:

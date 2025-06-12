@@ -47,6 +47,7 @@ airflow/airflow.db
 
 # Docker
 .env
+docker-compose.yml
 docker-compose.override.yml
 
 # Logs
@@ -56,3 +57,6 @@ logs/
 # Local development
 .DS_Store
 Thumbs.db 
+
+README.md
+django-app/config/settings.py
