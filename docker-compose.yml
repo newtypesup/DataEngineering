@@ -16,8 +16,43 @@ services:
       - DB_NAME=django
       - DB_USER=django
       - DB_PASSWORD=12345
+      # Kafka 서버 연결을 위한 환경 변수 설정
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       - django-db
+      - kafka
+
+  # ✅ Zookeeper - Kafka의 분산 코디네이션을 담당하는 서비스
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      # Zookeeper 클라이언트 포트 설정
+      ZOOKEEPER_CLIENT_PORT: 2181
+      # Zookeeper의 기본 시간 단위 설정 (밀리초)
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  # ✅ Kafka - 분산 스트리밍 플랫폼
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      # Kafka 브로커 ID 설정
+      KAFKA_BROKER_ID: 1
+      # Zookeeper 연결 설정
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # Kafka 브로커의 리스너 설정 (내부/외부 통신용)
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      # 리스너 보안 프로토콜 설정
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      # 브로커 간 통신에 사용할 리스너 이름
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # 토픽 복제 팩터 설정 (단일 브로커이므로 1로 설정)
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
   # ✅ PostgreSQL for Django
   django-db:
