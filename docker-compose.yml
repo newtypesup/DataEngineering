@@ -43,16 +43,26 @@ services:
     environment:
       # Kafka 브로커 ID 설정
       KAFKA_BROKER_ID: 1
-      # Zookeeper 연결 설정
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      # Kafka 브로커의 리스너 설정 (내부/외부 통신용)
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      # 리스너 보안 프로토콜 설정
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      # 브로커 간 통신에 사용할 리스너 이름
+      # KRaft 모드 설정
+      KAFKA_PROCESS_ROLES: broker,controller
+      # 클러스터 ID
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      # 컨트롤러 쿼럼 설정
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      # 리스너 설정
+      KAFKA_LISTENERS: PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093
+      # 외부/내부 리스너 광고
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092
+      # 리스너 보안 프로토콜 맵
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      # 브로커 간 통신 리스너 이름
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      # 토픽 복제 팩터 설정 (단일 브로커이므로 1로 설정)
+      # 토픽 복제 팩터
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # Zookeeper 연결
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # 컨트롤러 리스너 이름 설정
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
 
   # ✅ PostgreSQL for Django
   django-db:
