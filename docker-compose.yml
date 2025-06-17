@@ -1,25 +1,24 @@
 version: '3.8'
 
 services:
-  # ✅ Django
-  django-web:
+  # ✅ FastAPI
+  fastapi-web:
     build:
-      context: ./django-app
-    command: python manage.py runserver 0.0.0.0:8000
+      context: ./fastapi-app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - ./django-app:/app
+      - ./fastapi-app:/app
     ports:
       - "8000:8000"
     environment:
-      - DB_HOST=django-db
+      - DB_HOST=fastapi-db
       - DB_PORT=5432
-      - DB_NAME=django
-      - DB_USER=django
+      - DB_NAME=fastapi
+      - DB_USER=fastapi
       - DB_PASSWORD=12345
-      # Kafka 서버 연결을 위한 환경 변수 설정
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
-      - django-db
+      - fastapi-db
       - kafka
 
   # ✅ Zookeeper - Kafka의 분산 코디네이션을 담당하는 서비스
@@ -64,15 +63,15 @@ services:
       # 컨트롤러 리스너 이름 설정
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
 
-  # ✅ PostgreSQL for Django
-  django-db:
+  # ✅ PostgreSQL for FastAPI
+  fastapi-db:
     image: postgres:15
     environment:
-      POSTGRES_DB: django
-      POSTGRES_USER: django
+      POSTGRES_DB: fastapi
+      POSTGRES_USER: fastapi
       POSTGRES_PASSWORD: 12345
     volumes:
-      - django_postgres_data:/var/lib/postgresql/data
+      - fastapi_postgres_data:/var/lib/postgresql/data
     ports:
       - "5434:5432"
 
@@ -177,5 +176,5 @@ services:
     command: celery worker
 
 volumes:
-  django_postgres_data:
+  fastapi_postgres_data:
   airflow_postgres_data:

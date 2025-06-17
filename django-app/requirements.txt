@@ -1,5 +1,0 @@
-Django>=5.1.1
-psycopg2-binary>=2.9.10
-gunicorn>=23.0.0
-# Kafka 클라이언트 라이브러리 - 메시지 생산/소비를 위한 Python 패키지
-kafka-python>=2.0.2
