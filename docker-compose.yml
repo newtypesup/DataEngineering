@@ -2,12 +2,13 @@ version: '3.8'
 
 services:
   # ✅ FastAPI
-  fastapi-web:
+  backend:
     build:
-      context: ./fastapi-app
+      context: ./backend
+    container_name: fastapi-backend
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - ./fastapi-app:/app
+      - ./backend:/app
     ports:
       - "8000:8000"
     environment:
@@ -62,6 +63,19 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       # 컨트롤러 리스너 이름 설정
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8081:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:29092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+    depends_on:
+      - kafka
+      - zookeeper
 
   # ✅ PostgreSQL for FastAPI
   fastapi-db:
@@ -174,6 +188,25 @@ services:
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
     command: celery worker
+
+  frontend:
+    build: ./frontend
+    container_name: react-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    command: npm start
+
+  node-dev:
+    image: node:22
+    command: bash
+    volumes:
+      - ./frontend:/app
+    tty: true
 
 volumes:
   fastapi_postgres_data:
