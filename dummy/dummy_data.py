@@ -1,0 +1,144 @@
+##### dummy_data.py
+import random
+import pandas as pd
+from time import time
+from faker import Faker
+from datetime import datetime
+from dummy_utils import engine, query
+
+# Faker 및 DB 연결 세팅
+fake = Faker()
+Faker.seed(0)
+
+conn = engine.connect()
+df_input = pd.read_sql_query(query, engine)
+
+# 결과를 누적할 리스트
+category_rows = []
+content_rows = []
+download_rows = []
+
+# 반복 처리
+def _create_dummy_data(engine):
+    for idx, row in df_input.iterrows():
+        # 1. num 계산
+        count = round(random.uniform(0.7, 1.3), 2)
+        reg_date = pd.to_datetime(row['reg_date'])
+        date_diff = (datetime.now().date() - reg_date.date()).days + 100
+        num = int(round(count * date_diff, 0))
+        # print(num)
+
+        # 2. cate_id 및 parent_id 분기 처리
+        if row['cate_name'] == '게임':
+            if row['age_ratings'] == '전체이용가':
+                cate_id = '10000'
+            elif row['age_ratings'] == '12세이용가':
+                cate_id = '10012'
+            elif row['age_ratings'] == '15세이용가':
+                cate_id = '10015'
+            else:
+                cate_id = '10018'
+            parent_id = '0'
+
+        elif row['cate_name'] == '도구':
+            cate_id = '20000'
+            parent_id = '1'
+        elif row['cate_name'] == '여행':
+            cate_id = '30000'
+            parent_id = '1'
+        elif row['cate_name'] == '소셜 미디어':
+            cate_id = '40000'
+            parent_id = '1'
+        elif row['cate_name'] == '음악':
+            cate_id = '50000'
+            parent_id = '1'
+        elif row['cate_name'] == '맟춤 설정':
+            cate_id = '60000'
+            parent_id = '1'
+        elif row['cate_name'] == '오피스':
+            cate_id = '70000'
+            parent_id = '1'
+        elif row['cate_name'] == '사진':
+            cate_id = '80000'
+            parent_id = '1'
+        else:
+            cate_id = '90000'
+            parent_id = '1'
+
+        # 3. num 만큼 데이터 생성
+        for _ in range(num):
+            # category
+            category_rows.append({
+                'cate_id': cate_id,
+                'parent_id': parent_id,
+                'cate_name': row['cate_name'],
+                'age_ratings': row['age_ratings']
+            })
+
+            # content
+            content_rows.append({
+                'ctnt_id': row['ctnt_id'],
+                'cate_id': cate_id,
+                'ctnt_name': row['ctnt_name'],
+                'reg_date': row['reg_date']
+            })
+
+            # download
+            download_rows.append({
+                'ctnt_id':
+                row['ctnt_id'],
+                'cnty_cd':
+                random.choices(['KOR', 'USA', 'JPN', 'CHN', 'etc'],
+                               weights=[0.3, 0.2, 0.1, 0.2, 0.2])[0],
+                'status':
+                random.choices(['SUCCESS', 'FAIL'], weights=[0.9, 0.1])[0],
+                'date':
+                datetime.now().date()
+            })
+
+    # 4. 최종 DataFrame 생성
+    df_category = pd.DataFrame(category_rows).sort_values('parent_id')
+    df_content = pd.DataFrame(content_rows)
+    df_download = pd.DataFrame(download_rows)
+
+    df_category.to_sql('df_category',
+                       engine,
+                       if_exists='replace',
+                       index=False,
+                       chunksize=10000)
+    df_content.to_sql('df_content',
+                      engine,
+                      if_exists='replace',
+                      index=False,
+                      chunksize=10000)
+    df_download.to_sql('df_download',
+                       engine,
+                       if_exists='replace',
+                       index=False,
+                       chunksize=10000)
+    return df_category, df_content, df_download
+    # # 확인
+    # print("category:", df_category)
+    # print("content :", df_content)
+    # print("download:", df_download)
+
+if __name__ == "__main__":
+    try:
+        time_start = time()
+        df_category, df_content, df_download = _create_dummy_data(engine)
+        print(df_category.head())
+        print(df_content.head())
+        print(df_download.head())
+        conn.close()
+        print("=" * 50)
+        print("success")
+        print("=" * 50)
+        print("소요시간 :", round(time() - time_start, 2))
+        # DB 연결 종료
+
+    except Exception as ex:
+        print(ex)
+        conn.close()
+        print("=" * 50)
+        print("failed")
+        print("=" * 50)

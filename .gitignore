@@ -60,3 +60,5 @@ Thumbs.db
 
 README.md
 django-app/config/settings.py
+
+dummy/insert.sql
