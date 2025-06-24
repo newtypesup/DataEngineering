@@ -1,22 +1,26 @@
-##### dummy_data.py
 import random
-import pandas as pd
 from time import time
+import pandas as pd
 from faker import Faker
-from datetime import datetime
-from dummy_utils import engine, query
+from datetime import datetime, timedelta, timezone
+from dummy_utils import db_conn, get_input_table, load_df
 
 # Faker 및 DB 연결 세팅
 fake = Faker()
 Faker.seed(0)
+utc = datetime.now(timezone.utc)
+print(utc)
 
+engine = db_conn()
+query = get_input_table()
+df_input = load_df(engine, query)
 conn = engine.connect()
-df_input = pd.read_sql_query(query, engine)
 
 # 결과를 누적할 리스트
 category_rows = []
 content_rows = []
 download_rows = []
+
 
 # 반복 처리
 def _create_dummy_data(engine):
@@ -65,14 +69,15 @@ def _create_dummy_data(engine):
             cate_id = '90000'
             parent_id = '1'
 
-        # 3. num 만큼 데이터 생성
+            # 3. num 만큼 데이터 생성
         for _ in range(num):
             # category
             category_rows.append({
                 'cate_id': cate_id,
                 'parent_id': parent_id,
                 'cate_name': row['cate_name'],
-                'age_ratings': row['age_ratings']
+                'age_ratings': row['age_ratings'],
+                'run_time': utc.strftime("%Y-%m-%d %H:00")
             })
 
             # content
@@ -80,7 +85,8 @@ def _create_dummy_data(engine):
                 'ctnt_id': row['ctnt_id'],
                 'cate_id': cate_id,
                 'ctnt_name': row['ctnt_name'],
-                'reg_date': row['reg_date']
+                'reg_date': row['reg_date'],
+                'run_time': utc.strftime("%Y-%m-%d %H:00")
             })
 
             # download
@@ -89,11 +95,11 @@ def _create_dummy_data(engine):
                 row['ctnt_id'],
                 'cnty_cd':
                 random.choices(['KOR', 'USA', 'JPN', 'CHN', 'etc'],
-                               weights=[0.3, 0.2, 0.1, 0.2, 0.2])[0],
+                                weights=[0.3, 0.2, 0.1, 0.2, 0.2])[0],
                 'status':
                 random.choices(['SUCCESS', 'FAIL'], weights=[0.9, 0.1])[0],
-                'date':
-                datetime.now().date()
+                'date': (utc + timedelta(hours=9)).date(),
+                'run_time': utc.strftime("%Y-%m-%d %H:00")
             })
 
     # 4. 최종 DataFrame 생성
@@ -116,15 +122,17 @@ def _create_dummy_data(engine):
                        if_exists='replace',
                        index=False,
                        chunksize=10000)
-    return df_category, df_content, df_download
-    # # 확인
+
+    # 5. 확인
     # print("category:", df_category)
     # print("content :", df_content)
     # print("download:", df_download)
 
+    return df_category, df_content, df_download
+
 if __name__ == "__main__":
+    start_time = time()
     try:
-        time_start = time()
         df_category, df_content, df_download = _create_dummy_data(engine)
         print(df_category.head())
         print(df_content.head())
@@ -133,8 +141,6 @@ if __name__ == "__main__":
         print("=" * 50)
         print("success")
         print("=" * 50)
-        print("소요시간 :", round(time() - time_start, 2))
-        # DB 연결 종료
 
     except Exception as ex:
         print(ex)
@@ -142,3 +148,5 @@ if __name__ == "__main__":
         print("=" * 50)
         print("failed")
         print("=" * 50)
+    finally:
+        print("소요시간 :", round(time() - start_time, 2), "초")
