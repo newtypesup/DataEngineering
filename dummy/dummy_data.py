@@ -9,7 +9,6 @@ from dummy_utils import db_conn, get_input_table, load_df
 fake = Faker()
 Faker.seed(0)
 utc = datetime.now(timezone.utc)
-print(utc)
 
 engine = db_conn()
 query = get_input_table()
@@ -69,7 +68,7 @@ def _create_dummy_data(engine):
             cate_id = '90000'
             parent_id = '1'
 
-            # 3. num 만큼 데이터 생성
+        # 3. num 만큼 데이터 생성
         for _ in range(num):
             # category
             category_rows.append({

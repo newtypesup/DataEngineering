@@ -1,32 +1,21 @@
+#backend 에서 실행
+# uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 실행 명령어
 from fastapi import FastAPI
+from app.route import router
 from fastapi.middleware.cors import CORSMiddleware
-from .route import router
+from app.database import engine
+from app import models
 
-app = FastAPI(
-    title="FastAPI App",
-    description="FastAPI Application with Kafka and PostgreSQL",
-    version="1.0.0"
-)
+models.Base.metadata.create_all(bind = engine)
 
-# CORS 설정
+app = FastAPI()
+
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+  CORSMiddleware,
+  allow_origins = ["*"],
+  allow_credentials = True,
+  allow_methods = ["*"],
+  allow_headers = ["*"],
 )
 
 app.include_router(router)
-
-# @app.get("/api/hello")
-# async def say_hello():
-#     return {"message": "Hello from FastAPI!"}
-
-# @app.get("/")
-# async def root():
-#     return {"message": "Welcome to FastAPI!"}
-
-# @app.get("/health")
-# async def health_check():
-#     return {"status": "healthy"} 
