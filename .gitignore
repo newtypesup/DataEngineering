@@ -61,3 +61,6 @@ Thumbs.db
 README.md
 django-app/config/settings.py
 
+#etc
+.env
+.yml
