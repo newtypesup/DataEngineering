@@ -79,7 +79,7 @@ def _create_dummy_data(engine):
         # 3. num 만큼 데이터 생성
         for _ in range(final):
             create_uid = "abcdefghijklmnopqrstuvwxyz1234567890"
-            digit = random.randint(5, 5)
+            digit = random.randint(7, 7)
             user_id = "".join(random.sample(create_uid, digit))
 
             if user_id in users_regions_map:

@@ -1,8 +1,11 @@
 --테이블 설정
-create table df_input(ctnt_id bigint generated always as identity (start with 100000 increment by 1), ctnt_name text, cate_name text, age_ratings text, reg_date date default current_date, primary key(ctnt_id));
-create table df_category(cate_id int, parent_id int, cate_name text, age_ratings text, running_time text);
-create table df_content(ctnt_id bigint, cate_id int, ctnt_name text, reg_date date, running_time text);
-create table df_download(ctnt_id bigint, cnty_cd text, status text, date date, running_time text);
+create table df_input(ctnt_id bigint generated always as identity (start with 100000 increment by 1), ctnt_name varchar(255), cate_name varchar(255), age_ratings varchar(255), reg_date date default current_date, primary key(ctnt_id));
+create table df_category(cate_id int, parent_id int, cate_name varchar(255), age_ratings varchar(255), uid varchar(255), run_time date);
+create table df_content(ctnt_id bigint, cate_id int, ctnt_name varchar(255), reg_date date, uid varchar(255), run_time date);
+create table df_download(ctnt_id bigint, cnty_cd varchar(255), status varchar(255), date date, uid varchar(255), run_time date);
+
+--드랍
+drop table df_input, df_category, df_content, df_download;
 
 --사전 데이터 입력
 INSERT INTO df_input (ctnt_name, cate_name, age_ratings) VALUES ('카카오톡', '소셜 미디어', '전체이용가');
@@ -105,3 +108,89 @@ INSERT INTO df_input (ctnt_name, cate_name, age_ratings) VALUES ('히트2', '게
 INSERT INTO df_input (ctnt_name, cate_name, age_ratings) VALUES ('뮤 아크엔젤', '게임', '18세이용가');
 INSERT INTO df_input (ctnt_name, cate_name, age_ratings) VALUES ('킹덤: 왕가의 피', '게임', '18세이용가');
 INSERT INTO df_input (ctnt_name, cate_name, age_ratings) VALUES ('아키에이지 워', '게임', '18세이용가');
+
+
+
+--주간 게임 연령등급별 다운 실패 탑5 (전체이용가 제외)
+WITH recent_failures AS (
+    SELECT
+        b.ctnt_id,
+        a.age_ratings,
+        COUNT(*) AS fail_count
+    FROM df_download AS c
+    JOIN df_content AS b ON c.ctnt_id = b.ctnt_id AND c.uid = b.uid
+    JOIN df_category AS a ON b.cate_id = a.cate_id AND b.uid = a.uid
+    WHERE c.status = 'FAIL'
+      AND a.parent_id = '0'
+      AND c.date = '2025-07-01'
+      --AND c.date BETWEEN '$start_date' AND '$end_date'
+    GROUP BY b.ctnt_id, a.age_ratings
+),
+
+ranked_failures AS (
+    SELECT *,
+           ROW_NUMBER() OVER (PARTITION BY age_ratings ORDER BY fail_count DESC) AS rnk
+    FROM recent_failures
+)
+
+SELECT
+	DISTINCT
+    rf.ctnt_id,
+    rf.age_ratings,
+    rf.fail_count,
+    b.ctnt_name
+FROM ranked_failures rf
+JOIN df_content b ON rf.ctnt_id = b.ctnt_id
+WHERE age_ratings != '전체이용가' AND rnk <= 5
+ORDER BY age_ratings, fail_count DESC;
+
+
+--일간 다운로드 탑5 한국제외
+
+WITH daily_top5_nk AS (
+    SELECT 
+        b.ctnt_id,
+        b.ctnt_name,
+        c.date,
+        COUNT(b.ctnt_id) AS app_count,
+        ROW_NUMBER() OVER (PARTITION BY c.date ORDER BY COUNT(b.ctnt_id) DESC) AS app_rank
+    FROM df_content b
+    JOIN df_download c ON b.uid = c.uid
+    WHERE c.cnty_cd != 'KOR'
+      AND c.status = 'SUCCESS'
+    GROUP BY b.ctnt_id, b.ctnt_name, c.date
+)
+
+SELECT
+    dt5.app_rank,
+    dt5.ctnt_name,
+    dt5.app_count
+FROM daily_top5_nk dt5
+WHERE dt5.app_rank <= 5
+  AND dt5.date = '2025-07-01';
+  --AND dt5.date = '$date';
+
+--일간 다운로드 탑5 한국만
+
+WITH daily_top5_k AS (
+    SELECT 
+        b.ctnt_id,
+        b.ctnt_name,
+        c.date,
+        COUNT(b.ctnt_id) AS app_count,
+        ROW_NUMBER() OVER (PARTITION BY c.date ORDER BY COUNT(b.ctnt_id) DESC) AS app_rank
+    FROM df_content b
+    JOIN df_download c ON b.uid = c.uid
+    WHERE c.cnty_cd = 'KOR'
+      AND c.status = 'SUCCESS'
+    GROUP BY b.ctnt_id, b.ctnt_name, c.date
+)
+
+SELECT
+    dt5.app_rank,
+    dt5.ctnt_name,
+    dt5.app_count
+FROM daily_top5_nk dt5
+WHERE dt5.app_rank <= 5
+  AND dt5.date = '2025-07-01';
+  --AND dt5.date = '$date';
