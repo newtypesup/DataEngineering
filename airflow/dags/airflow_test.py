@@ -1,9 +1,9 @@
+import pendulum
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from datetime import datetime, timezone, timedelta
 
-
-KST = timezone(timedelta(hours=9))
+KST = pendulum.timezone("Asia/Seoul")
 
 with DAG(
     dag_id="hello_world",

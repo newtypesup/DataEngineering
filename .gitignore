@@ -34,7 +34,7 @@ ENV/
 # Airflow
 airflow/logs/
 airflow/plugins/
-airflow/scripts/
+#airflow/scripts/
 airflow/*.cfg
 airflow/*.pid
 airflow/.env

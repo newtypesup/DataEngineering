@@ -1,12 +1,12 @@
-from airflow import DAG
-from airflow.operators.python import PythonOperator
-from datetime import datetime
 import boto3
 import logging
+from airflow import DAG
+from datetime import datetime
+from airflow.operators.python import PythonOperator
 
 def list_s3_files():
     s3 = boto3.client('s3')
-    response = s3.list_objects_v2(Bucket='newtypesup-etl')
+    response = s3.list_objects_v2(Bucket='newtypesup')
     for obj in response.get('Contents', []):
         logging.info(f"S3 FILE: {obj['Key']}")
 
