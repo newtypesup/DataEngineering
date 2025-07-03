@@ -1,6 +1,5 @@
-##### 로컬 테스트 ##### s3 업로드로 바꿔야함.
+##### 로컬 테스트 #####
 import os
-# import boto3  #S3
 import pandas as pd
 from datetime import datetime
 from dummy_utils import db_conn, get_ccd_table, load_df
@@ -11,7 +10,6 @@ LIST = ['category', 'content', 'download']
 engine = db_conn()
 ccd = get_ccd_table()
 
-
 def to_parquet():
   for _ in range(len(ccd)):
     df = load_df(engine, ccd[_])
@@ -21,7 +19,6 @@ def to_parquet():
     os.makedirs(output_dir, exist_ok = True)
     df.to_parquet(full_path, engine = "pyarrow", compression = "gzip")
     yield output_file
-
 
 if __name__ == "__main__":
   try:

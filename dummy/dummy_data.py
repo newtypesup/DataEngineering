@@ -1,19 +1,14 @@
 import random
 import pandas as pd
 from time import time
-from faker import Faker
 from datetime import datetime, timedelta, timezone
 from dummy_utils import db_conn, get_input_table, load_df
 
-# Faker 및 DB 연결 세팅
-fake = Faker()
-Faker.seed(0)
 utc = datetime.now(timezone.utc)
 
 engine = db_conn()
 query = get_input_table()
 df_input = load_df(engine, query)
-conn = engine.connect()
 
 # 결과를 누적할 리스트
 category_rows = []
@@ -155,13 +150,11 @@ if __name__ == "__main__":
         print(len(df_content), "개")
         print(df_download.head())
         print(len(df_download), "개")
-        conn.close()
         print("=" * 50)
         print("success")
         print("=" * 50)
     except Exception as ex:
         print(ex)
-        conn.close()
         print("=" * 50)
         print("failed")
         print("=" * 50)
