@@ -1,8 +1,8 @@
-import boto3
+import boto3 # type: ignore
 import logging
 from airflow import DAG
 from datetime import datetime
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator # type: ignore
 
 def list_s3_files():
     s3 = boto3.client('s3')

@@ -1,6 +1,6 @@
 import pendulum
 from airflow import DAG
-from airflow.operators.bash import BashOperator
+from airflow.operators.bash import BashOperator # type: ignore
 from datetime import datetime, timezone, timedelta
 
 KST = pendulum.timezone("Asia/Seoul")

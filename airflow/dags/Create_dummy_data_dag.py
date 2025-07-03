@@ -1,6 +1,6 @@
 import pendulum
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator # type: ignore
 from datetime import datetime, timezone
 from scripts.Create_dummy_data import create_dummy
 from scripts.Uploading_dummy_parquet_to_s3 import to_parquet_and_upload
