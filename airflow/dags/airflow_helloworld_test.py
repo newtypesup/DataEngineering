@@ -7,7 +7,7 @@ KST = pendulum.timezone("Asia/Seoul")
 
 with DAG(
     dag_id="hello_world",
-    start_date=datetime(2025, 6, 8, 20, 50, tzinfo=KST),  # 한국 시간
+    start_date=pendulum.datetime(2025, 6, 1, 1, 1, tz="Asia/Seoul"),
     schedule="*/10 * * * *",
     catchup=False
 ) as dag:

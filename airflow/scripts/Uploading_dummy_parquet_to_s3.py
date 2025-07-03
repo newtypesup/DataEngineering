@@ -1,24 +1,23 @@
-# import sys
-# import os
-# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../dummy')))
+import os, sys
+base_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
+sys.path.append(base_path)
 import io
 import boto3
-import pandas as pd
-from datetime import datetime
+import pendulum
 from dummy.dummy_utils import db_conn, get_ccd_table, load_df
 
 def to_parquet_and_upload():
-    TIME = datetime.now().strftime("%Y%m%d%H")
+    TIME = pendulum.now("Asia/Seoul").strftime("%Y%m%d%H")
     LIST = ['category', 'content', 'download']
     BUCKET_NAME = 'newtypesup'
     engine = db_conn()
-    ccd = get_ccd_table()
+    query = get_ccd_table()
 
     s3_client = boto3.client('s3')
 
-    for i in range(len(ccd)):
+    for i in range(len(query)):
         results = []
-        df = load_df(engine, ccd[i])
+        df = load_df(engine, query[i])
         s3_key = f"etl/raw/{LIST[i]}/{TIME[2:4]}/{TIME[4:6]}/{TIME[6:8]}/{LIST[i]}_{TIME}.parquet"
 
         buffer = io.BytesIO()
