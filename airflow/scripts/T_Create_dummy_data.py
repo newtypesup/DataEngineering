@@ -2,13 +2,14 @@ import os, sys
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
 sys.path.append(base_path)
 import random
+import pendulum
 import pandas as pd
 from time import time
 from datetime import datetime, timedelta, timezone
 from dummy.dummy_utils import db_conn, get_input_table, load_df
 
 utc = datetime.now(timezone.utc)
-def create_dummy():
+def create_dummy(**context):
 
     engine = db_conn()
     query = get_input_table()
@@ -20,13 +21,28 @@ def create_dummy():
     download_rows = []
     users_regions_map = {}
 
+    KST = pendulum.timezone("Asia/Seoul") # glue 테스트를 위한 사전 데이터 배치 코드 🔻
+    base_time = pendulum.datetime(2025, 7, 1, 0, 0, tz=KST)
+    start_time = pendulum.datetime(2025, 7, 7, 0, 34, tz=KST)
+    execution_date = context['execution_date']
+    # pendulum 객체로 변환 (혹시 모를 타입 문제 방지)
+    if not isinstance(execution_date, pendulum.DateTime):
+        execution_date = pendulum.instance(execution_date).in_timezone(KST)
+    else:
+        execution_date = execution_date.in_timezone(KST)
+    elapsed_minutes = (execution_date - start_time).in_minutes()
+    execution_count = elapsed_minutes // 2
+    hours_to_add = execution_count * 2
+    target_time = base_time.add(hours=hours_to_add)
+    print("타겟 날짜 target_time", target_time)# glue 테스트를 위한 사전 데이터 배치 코드 🔺
+
     # 반복 처리
     for idx, row in df_input.iterrows():
         # 1. 변칙률 계산
         count = round(random.uniform(0.7, 1.3), 2)
         reg_date = pd.to_datetime(row['reg_date'])
-        date_diff = (datetime.now().date() - reg_date.date()).days + 10 # 기본 코드드
-        print("날짜 값", date_diff)
+        date_diff = (target_time.date() - reg_date.date()).days + 10 # glue 테스트를 위한 사전 데이터 배치 코드
+        print("날짜 값 date_diff", date_diff)
         num = count * (date_diff**0.75)
         spike = random.random()
         if spike < 0.05:
@@ -96,7 +112,7 @@ def create_dummy():
                 'cate_name': row['cate_name'],
                 'age_ratings': row['age_ratings'],
                 'uid': user_id,
-                'run_time': utc.strftime("%Y%m%d%H")
+                'run_time': target_time.strftime("%Y%m%d%H") # glue 테스트를 위한 사전 데이터 배치 코드
             })
 
             # content
@@ -106,7 +122,7 @@ def create_dummy():
                 'ctnt_name': row['ctnt_name'],
                 'reg_date': row['reg_date'],
                 'uid': user_id,
-                'run_time': utc.strftime("%Y%m%d%H")
+                'run_time': target_time.strftime("%Y%m%d%H") # glue 테스트를 위한 사전 데이터 배치 코드
             })
 
             # download
@@ -114,9 +130,9 @@ def create_dummy():
                 'ctnt_id': row['ctnt_id'],
                 'cnty_cd': region,
                 'status': status,
-                'date': (utc + timedelta(hours=9)).date(),
+                'date': target_time.date(), # glue 테스트를 위한 사전 데이터 배치 코드
                 'uid': user_id,
-                'run_time': utc.strftime("%Y%m%d%H")
+                'run_time': target_time.strftime("%Y%m%d%H") # glue 테스트를 위한 사전 데이터 배치 코드
             })
 
     # 4. 최종 DataFrame 생성
