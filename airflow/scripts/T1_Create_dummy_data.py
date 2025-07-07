@@ -22,8 +22,8 @@ def create_dummy(**context):
     users_regions_map = {}
 
     KST = pendulum.timezone("Asia/Seoul") # glue 테스트를 위한 사전 데이터 배치 코드 🔻
-    base_time = pendulum.datetime(2025, 7, 1, 0, 0, tz=KST)
-    start_time = pendulum.datetime(2025, 7, 7, 0, 34, tz=KST)
+    base_time = pendulum.datetime(2025, 6, 1, 0, 0, tz=KST) # 기준이 될 최초 날짜 
+    start_time = pendulum.datetime(2025, 7, 7, 0, 0, tz=KST) # dag의 첫 실행 날짜
     execution_date = context['execution_date']
     # pendulum 객체로 변환 (혹시 모를 타입 문제 방지)
     if not isinstance(execution_date, pendulum.DateTime):
