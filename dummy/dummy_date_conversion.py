@@ -10,7 +10,8 @@ df_input = load_df(engine, query)
 
 def _reg_date_conversion(df_input):
     start_date = datetime.strptime('2020-01-01', "%Y-%m-%d").date()
-    end_date = datetime.now().date()
+    end_date = datetime.strptime('2025-05-31', "%Y-%m-%d").date()
+    # end_date = datetime.now().date()
     df_input['reg_date'] = [(start_date + timedelta(days = random.randint(0, (end_date - start_date).days))).strftime("%Y-%m-%d") for _ in range(len(df_input))]
     return df_input
 
