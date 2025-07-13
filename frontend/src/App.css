@@ -18,7 +18,7 @@ body, html {
 
 .bubble {
   position: absolute;
-  bottom: -100px;
+  bottom: -200px;
   animation-name: rise;
   animation-timing-function: ease-in;
   animation-fill-mode: forwards;
@@ -47,7 +47,7 @@ body, html {
 @keyframes rise {
   0% {
     transform: translateY(0) scale(0.9);
-    opacity: 0.5;
+    opacity: 1;
   }
   100% {
     transform: translateY(-120vh) scale(1.1);
@@ -59,15 +59,16 @@ body, html {
   position: relative;
   z-index: 10;
   background: rgba(0, 47, 105, 0.9);
-  padding: 1.8rem 1rem;
+  padding: 1.5rem 1rem;
   border-radius: 24px;
-  width: 38vw;
-  height: 80wh;
-  max-width: 40%;
+  width: 19%;
+  height: 45%;
+  min-width: 330px;
+  min-height: 400px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(20px);
   color: whitesmoke;
-  animation: fadeDown 1s ease-out;
+  animation: fadeDown 1.4s ease-out;
 }
 
 /* fade 효과 */
@@ -113,35 +114,35 @@ form {
 }
 
 input {
-  width: 20.4vw;
+  width: 59%;
   padding: 0.8rem;
   margin-top:0.5rem;
   margin-bottom: 0.5rem;
   border-radius: 12px;
   border: 1px solid #ffffff33;
   background-color: rgba(255, 255, 255, 0.05);
-  color: white;
+  color: whitesmoke;
   font-size: 1rem;
   transition: all 0.3s ease;
   backdrop-filter: blur(4px);
 }
 
 select {
-  width: 23vw;
+  width: 65%;
   padding: 0.8rem;
   margin-top: 0.5rem;
   margin-bottom: 0.5rem;
   border-radius: 12px;
   border: 1px solid #ffffff33;
   background-color: rgba(255, 255, 255, 0.05);
-  color: white;
+  color: whitesmoke;
   font-size: 1rem;
   transition: all 0.3s ease;
   backdrop-filter: blur(4px);
 }
 
 input::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: whitesmoke;
 }
 
 input:focus, select:focus {
@@ -161,7 +162,7 @@ select option:hover, select option:checked {
 }
 
 button[type="submit"] {
-  width: 23vw;
+  width: 65%;
   padding: 0.6rem;
   margin-top: 0.5rem;
   margin-bottom: 0.5rem;
@@ -180,16 +181,16 @@ button[type="submit"]:hover {
 }
 
 .bottom-buttons {
-  width: 23vw;
+  width: 65%;
   margin-top: 0.5rem;
   margin-bottom: 0.5rem;
   display: flex;
-  gap: 1vw;
+  gap: 5%;
   justify-content: center;
 }
 
 .bottom-buttons button {
-  width: 11vw;
+  width: 65%;
   padding: 0.6rem;
   border: none;
   border-radius: 12px;

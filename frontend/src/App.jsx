@@ -25,7 +25,7 @@ function App() {
   // 비눗방울 생성 함수
   const createBubble = () => {
     const size = 45 + Math.random() * 140;
-    const maxSize = 100;
+    const maxSize = 150;
     const minDuration = 6;
     const maxDuration = 16;
     const duration =
@@ -50,7 +50,7 @@ function App() {
         if (document.visibilityState === "visible") {
           setBubbles((prev) => [...prev.slice(-40), createBubble()]);
         }
-      }, 1000); // 1초 간격
+      }, 500); // 0.5초 간격
     };
 
     const stop = () => {
@@ -91,7 +91,7 @@ function App() {
     };
 
     try {
-      const res = await fetch("content", {
+      const res = await fetch("/contents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
