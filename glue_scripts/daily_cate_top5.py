@@ -9,7 +9,7 @@ from pyspark.context import SparkContext  # type: ignore
 from awsglue.context import GlueContext  # type: ignore
 from awsglue.job import Job  # type: ignore
 
-from glue.utils import execute_athena_query, get_query  # type: ignore
+from utils.util import execute_athena_query, get_query  # type: ignore
 
 warnings.filterwarnings("ignore")
 
@@ -22,19 +22,19 @@ def _parameter_to_dict():
     parameter_info = dict()
 
     if ('--batch_date' in argv_list) and (getResolvedOptions(sys.argv, ['batch_date'])['batch_date'] != '$today'):
-        parameter_info['batch_date'] = getResolvedOptions(sys.argv, ['batch_date'])['batch_date'] # 2025-06-01
+        parameter_info['batch_date'] = getResolvedOptions(sys.argv, ['batch_date'])['batch_date'] # 2025-05-01
     else:
         parameter_info['batch_date'] = ((datetime.now() + timedelta(hours=9)).strftime(DATE_FORMAT))
-
     for key, value in parameter_info.items():
         print('> {} : {}'.format(key, value))
     date_info = parameter_info['batch_date']
+    print('> batch_date : ', date_info)
     return date_info
 
 def _extract_daily_cate_top5(date_info):
     print('_extract_daily_cate_top5()')
-
-    query_text = get_query('daily_cate_top5').replace('$today', date_info)
+    metric_name = 'daily_cate_top5'
+    query_text = get_query(metric_name).replace('$today', date_info)
     data_frame = execute_athena_query(query_text, database='newtypesup_db')
     df_result = data_frame.fillna('NA')
     df_result['app_rank'] = df_result['app_rank'].astype(int)
@@ -51,7 +51,7 @@ def _save_to_s3(df_result, date_info):
     args = getResolvedOptions(sys.argv, ['JOB_NAME'])
     sc = SparkContext()
     gluecontext = GlueContext(sc)
-    spark = gluecontext.spark_session()
+    spark = gluecontext.spark_session
     job = Job(gluecontext)
     job.init(args['JOB_NAME'], args)
 
