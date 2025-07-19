@@ -64,4 +64,5 @@ django-app/config/settings.py
 .env.airflow
 .env.fastapi
 .env.aws
+.env.aws.IAM
 .yml
