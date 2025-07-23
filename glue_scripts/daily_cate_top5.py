@@ -1,8 +1,9 @@
 import sys
+import pytz
 import time
 import boto3  # type: ignore
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from awsglue.utils import getResolvedOptions  # type: ignore
 from pyspark.context import SparkContext  # type: ignore
@@ -15,6 +16,7 @@ warnings.filterwarnings("ignore")
 
 DATE_FORMAT = "%Y-%m-%d"
 S3_SAVE_PATH = "s3://newtypesup/etl/results/daily_cate_top5/"
+YESTERDAY_KST = datetime.now(timezone.utc).astimezone(pytz.timezone('Asia/Seoul')) - timedelta(days=1)
 
 def _parameter_to_dict():
     print('_parameter_to_dict()')
@@ -22,11 +24,13 @@ def _parameter_to_dict():
     parameter_info = dict()
 
     if ('--batch_date' in argv_list) and (getResolvedOptions(sys.argv, ['batch_date'])['batch_date'] != '$today'):
-        parameter_info['batch_date'] = getResolvedOptions(sys.argv, ['batch_date'])['batch_date'] # 2025-05-01
+        parameter_info['batch_date'] = getResolvedOptions(sys.argv, ['batch_date'])['batch_date']  # e.g., 2025-05-01
     else:
-        parameter_info['batch_date'] = ((datetime.now() + timedelta(hours=9)).strftime(DATE_FORMAT))
+        parameter_info['batch_date'] = YESTERDAY_KST.strftime(DATE_FORMAT)
+
     for key, value in parameter_info.items():
         print('> {} : {}'.format(key, value))
+
     date_info = parameter_info['batch_date']
     print('> batch_date : ', date_info)
     return date_info
@@ -35,6 +39,7 @@ def _extract_daily_cate_top5(date_info):
     print('_extract_daily_cate_top5()')
     metric_name = 'daily_cate_top5'
     query_text = get_query(metric_name).replace('$today', date_info)
+
     data_frame = execute_athena_query(query_text, database='newtypesup_db')
     df_result = data_frame.fillna('NA')
     df_result['app_rank'] = df_result['app_rank'].astype(int)
@@ -59,7 +64,8 @@ def _save_to_s3(df_result, date_info):
     print('> Ready to save to S3')
     df_single.show()
 
-    output_path = f"{S3_SAVE_PATH}/year={date_info[0:4]}/month={date_info[5:7]}/"
+    year, month, day = date_info.split('-')
+    output_path = f"{S3_SAVE_PATH}/year={year}/month={month}/day={day}/"
     print('> Writing to ', output_path)
 
     df_single.write.mode('overwrite').option('header', 'true').csv(output_path)
@@ -67,7 +73,7 @@ def _save_to_s3(df_result, date_info):
 
     s3 = boto3.client('s3')
     bucket_name = 'newtypesup'
-    prefix = f"etl/results/daily_cate_top5/year={date_info[0:4]}/month={date_info[5:7]}/"
+    prefix = f"etl/results/daily_cate_top5/year={year}/month={month}/day={day}/"
     response = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
 
     print('> S3 objects:', response)
@@ -83,11 +89,9 @@ def _save_to_s3(df_result, date_info):
 
         original_obj = s3.get_object(Bucket=bucket_name, Key=part_file_key)
         raw_data = original_obj['Body'].read()
-
         data_with_bom = b'\xef\xbb\xbf' + raw_data
 
         s3.put_object(Bucket=bucket_name, Key=new_file_key, Body=data_with_bom)
-
         s3.delete_object(Bucket=bucket_name, Key=part_file_key)
 
         print(f"> BOM added and file renamed: {part_file_key} → {new_file_key}")
