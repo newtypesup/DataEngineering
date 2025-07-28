@@ -6,6 +6,7 @@ import pendulum
 import pandas as pd
 from time import time
 from datetime import datetime, timedelta, timezone
+from sqlalchemy.types import BigInteger, Integer, String, Date
 from dummy.dummy_utils import db_conn, get_input_table, load_df
 
 utc = datetime.now(timezone.utc)
@@ -22,10 +23,10 @@ def create_dummy(**context):
     users_regions_map = {}
 
     KST = pendulum.timezone("Asia/Seoul") # glue 테스트를 위한 사전 데이터 배치 코드 🔻
-    base_time = pendulum.datetime(2025, 6, 11, 0, 0, tz=KST) # 기준이 될 최초 날짜 
-    start_time = pendulum.datetime(2025, 7, 9, 20, 0, tz=KST) # dag의 첫 실행 날짜
+    base_time = pendulum.datetime(2025, 5, 1, 10, 0, tz=KST) # 기준이 될 최초 날짜 
+    start_time = pendulum.datetime(2025, 7, 16, 23, 6, tz=KST) # dag의 첫 실행 날짜
     execution_date = context['execution_date']
-    # pendulum 객체로 변환 (혹시 모를 타입 문제 방지)
+
     if not isinstance(execution_date, pendulum.DateTime):
         execution_date = pendulum.instance(execution_date).in_timezone(KST)
     else:
@@ -140,21 +141,52 @@ def create_dummy(**context):
     df_content = pd.DataFrame(content_rows)
     df_download = pd.DataFrame(download_rows)
 
+    category_dtypes = {
+                        'cate_id' : BigInteger(),
+                        'parent_id' : Integer(),
+                        'cate_name' : String(50),
+                        'age_ratings' : String(50),
+                        'uid' : String(50),
+                        'run_time' : String(50)
+                    }
+    content_dtypes = {
+                        'ctnt_id' : Integer(),
+                        'cate_id' : BigInteger(),
+                        'ctnt_name' : String(50),
+                        'reg_date' : String(50),
+                        'uid' : String(50),
+                        'run_time' : String(50)
+                    }
+    download_dtypes = {
+                        'ctnt_id' : Integer(),
+                        'cnty_cd' : String(50),
+                        'status' : String(50),
+                        'date' : Date(),
+                        'uid' : String(50),
+                        'run_time' : String(50)
+                    }
+
     df_category.to_sql('df_category',
-                       engine,
-                       if_exists='replace',
-                       index=False,
-                       chunksize=1000)
+                        engine,
+                        if_exists='replace',
+                        index=False,
+                        chunksize=1000,
+                        dtype=category_dtypes
+                    )
     df_content.to_sql('df_content',
-                      engine,
-                      if_exists='replace',
-                      index=False,
-                      chunksize=1000)
+                        engine,
+                        if_exists='replace',
+                        index=False,
+                        chunksize=1000,
+                        dtype=content_dtypes
+                    )
     df_download.to_sql('df_download',
-                       engine,
-                       if_exists='replace',
-                       index=False,
-                       chunksize=1000)
+                        engine,
+                        if_exists='replace',
+                        index=False,
+                        chunksize=1000,
+                        dtype=download_dtypes
+                    )
     
     return df_category, df_content, df_download
 
