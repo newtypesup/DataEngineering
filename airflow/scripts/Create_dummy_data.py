@@ -1,13 +1,16 @@
 import os, sys
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
 sys.path.append(base_path)
+import pytz
 import random
 import pandas as pd
 from time import time
 from datetime import datetime, timedelta, timezone
+from sqlalchemy.types import BigInteger, Integer, String, Date
 from dummy.dummy_utils import db_conn, get_input_table, load_df
 
-utc = datetime.now(timezone.utc)
+K_TIME = datetime.now(timezone.utc).astimezone(pytz.timezone('Asia/Seoul'))
+
 def create_dummy():
 
     engine = db_conn()
@@ -96,7 +99,7 @@ def create_dummy():
                 'cate_name': row['cate_name'],
                 'age_ratings': row['age_ratings'],
                 'uid': user_id,
-                'run_time': utc.strftime("%Y%m%d%H")
+                'run_time': K_TIME.strftime("%Y%m%d%H")
             })
 
             # content
@@ -106,7 +109,7 @@ def create_dummy():
                 'ctnt_name': row['ctnt_name'],
                 'reg_date': row['reg_date'],
                 'uid': user_id,
-                'run_time': utc.strftime("%Y%m%d%H")
+                'run_time': K_TIME.strftime("%Y%m%d%H")
             })
 
             # download
@@ -114,9 +117,9 @@ def create_dummy():
                 'ctnt_id': row['ctnt_id'],
                 'cnty_cd': region,
                 'status': status,
-                'date': (utc + timedelta(hours=9)).date(),
+                'date': K_TIME.date(),
                 'uid': user_id,
-                'run_time': utc.strftime("%Y%m%d%H")
+                'run_time': K_TIME.strftime("%Y%m%d%H")
             })
 
     # 4. 최종 DataFrame 생성
@@ -124,21 +127,53 @@ def create_dummy():
     df_content = pd.DataFrame(content_rows)
     df_download = pd.DataFrame(download_rows)
 
+    category_dtypes = {
+                        'cate_id' : BigInteger(),
+                        'parent_id' : Integer(),
+                        'cate_name' : String(50),
+                        'age_ratings' : String(50),
+                        'uid' : String(50),
+                        'run_time' : String(50)
+                    }
+    content_dtypes = {
+                        'ctnt_id' : Integer(),
+                        'cate_id' : BigInteger(),
+                        'ctnt_name' : String(50),
+                        'reg_date' : String(50),
+                        'uid' : String(50),
+                        'run_time' : String(50)
+                    }
+    download_dtypes = {
+                        'ctnt_id' : Integer(),
+                        'cnty_cd' : String(50),
+                        'status' : String(50),
+                        'date' : Date(),
+                        'uid' : String(50),
+                        'run_time' : String(50)
+                    }
+
+
     df_category.to_sql('df_category',
-                       engine,
-                       if_exists='replace',
-                       index=False,
-                       chunksize=1000)
+                        engine,
+                        if_exists='replace',
+                        index=False,
+                        chunksize=1000,
+                        dtype=category_dtypes
+                    )
     df_content.to_sql('df_content',
-                      engine,
-                      if_exists='replace',
-                      index=False,
-                      chunksize=1000)
+                        engine,
+                        if_exists='replace',
+                        index=False,
+                        chunksize=1000,
+                        dtype=content_dtypes
+                    )
     df_download.to_sql('df_download',
-                       engine,
-                       if_exists='replace',
-                       index=False,
-                       chunksize=1000)
+                        engine,
+                        if_exists='replace',
+                        index=False,
+                        chunksize=1000,
+                        dtype=download_dtypes
+                    )
     
     return df_category, df_content, df_download
 
