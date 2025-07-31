@@ -1,7 +1,7 @@
-import boto3
+import boto3 #type: ignore
 import pendulum
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator #type: ignore
 from datetime import datetime
 
 KST = pendulum.timezone("Asia/Seoul")
@@ -15,7 +15,7 @@ def daily_cate_top5_job(job_name):
 with DAG(
     dag_id='daily_cate_top5',
     start_date=datetime(2025, 5, 1, tzinfo=KST),
-    schedule='0 9 * * 1',  # 매주 월요일 오전 9시 KST
+    schedule='0 9 * * *',  # 매일 오전 9시 KST
     catchup=False,
     tags=['daily', 'category', 'top5'],
 ) as dag:
@@ -27,3 +27,4 @@ with DAG(
     )
 
     daily_cate_top5
+    
