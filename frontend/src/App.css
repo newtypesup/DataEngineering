@@ -182,21 +182,21 @@ button[type="submit"]:hover {
 
 .bottom-buttons {
   width: 65%;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
   display: flex;
-  gap: 5%;
   justify-content: center;
 }
 
 .bottom-buttons button {
-  width: 65%;
+  width: 100%;
   padding: 0.6rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  font-weight: bold;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(to right, #005fcc, #00aaff);
-  color: white;
-  font-weight: bold;
+  background: linear-gradient(to right, #007bff, #00c6ff);
+  color: whitesmoke;
   cursor: pointer;
   transition: transform 0.3s ease;
 }

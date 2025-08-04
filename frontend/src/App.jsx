@@ -160,7 +160,6 @@ function App() {
           <button type="submit">등 록</button>
           <div className="bottom-buttons">
             <button type="button">통 계</button>
-            <button type="button">예 측</button>
           </div>
         </form>
       </div>
