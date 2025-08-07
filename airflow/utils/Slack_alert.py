@@ -3,7 +3,7 @@ import os, sys
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__),'..','..'))
 import requests
 
-def slack_alert(context):
+def slack_fail_alert(context):
     slack_webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
 
     dag_id = context.get('dag').dag_id
@@ -30,7 +30,7 @@ def slack_success_alert(context):
     log_url = context.get('task_instance').log_url
 
     text = f"""
-    :white_check_mark: *Airflow Task 성공!*
+    :white_check_mark: *Airflow DAG 성공!*
     *DAG*: {dag_id}
     *Task*: {task_id}
     *Execution Time*: {execution_date}
