@@ -1,12 +1,12 @@
-from airflow import DAG
-from airflow.operators.python import PythonOperator
-from datetime import datetime
-import boto3
 import re
+import boto3 #type: ignore
+from datetime import datetime
+from airflow import DAG
+from airflow.operators.python import PythonOperator #type: ignore
 
 default_args = {
     'owner': 'airflow',
-    'start_date': datetime(2025, 7, 1),
+    'start_date': datetime(2025, 5, 1),
     'retries': 0,
 }
 
