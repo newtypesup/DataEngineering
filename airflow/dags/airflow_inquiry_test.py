@@ -10,10 +10,12 @@ def list_s3_files():
     for obj in response.get('Contents', []):
         logging.info(f"S3 FILE: {obj['Key']}")
 
-with DAG(dag_id='s3_test_Inquiry_dag',
+with DAG(
+        dag_id='inquiry_test',
          start_date=datetime(2023, 1, 1),
          schedule_interval=None,
-         catchup=False) as dag:
+         catchup=False,
+         tags=['test', 's3', 'file', 'list', 'output']) as dag:
 
     t1 = PythonOperator(
         task_id='list_s3_files',
