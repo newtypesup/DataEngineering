@@ -8,10 +8,10 @@ from dummy.dummy_utils import db_conn, get_ccd_table, load_df
 
 def to_parquet_and_upload(**context):
     KST = pendulum.timezone("Asia/Seoul") # glue 테스트를 위한 사전 데이터 배치 코드 🔻
-    base_time = pendulum.datetime(2025, 6, 11, 0, 0, tz=KST) # 기준이 될 최초 날짜 
-    start_time = pendulum.datetime(2025, 7, 9, 20, 0, tz=KST) # dag의 첫 실행 날짜
+    base_time = pendulum.datetime(2025, 5, 1, 0, 0, tz=KST) # 기준이 될 최초 날짜 
+    start_time = pendulum.datetime(2025, 8, 1, 0, 0, tz=KST) # dag의 첫 실행 날짜
     execution_date = context['execution_date']
-    # pendulum 객체로 변환 (혹시 모를 타입 문제 방지)
+
     if not isinstance(execution_date, pendulum.DateTime):
         execution_date = pendulum.instance(execution_date).in_timezone(KST)
     else:
@@ -33,7 +33,7 @@ def to_parquet_and_upload(**context):
     results = []
     for i in range(len(query)):
         df = load_df(engine, query[i])
-        s3_key = f"etl/raw/{LIST[i]}/{TIME[2:4]}/{TIME[4:6]}/{TIME[6:8]}/{LIST[i]}_{TIME}.parquet"
+        s3_key = f"etl/raw/{LIST[i]}/year={TIME[0:4]}/month={TIME[4:6]}/day={TIME[6:8]}/{LIST[i]}_{TIME}.parquet"
 
         buffer = io.BytesIO()
         df.to_parquet(buffer, engine="pyarrow", compression="gzip")
