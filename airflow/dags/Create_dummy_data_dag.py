@@ -13,7 +13,7 @@ default_args = {
     'on_failure_callback': slack_fail_alert,
 }
 with DAG(
-    dag_id="Create_dummy_data",
+    dag_id="create_dummy_data",
     default_args=default_args,
     schedule_interval="* */2 * * *", # 매 2시간마다
     start_date=datetime(2025, 5, 1, 0, 0, tzinfo=KST),
