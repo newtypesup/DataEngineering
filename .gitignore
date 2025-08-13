@@ -46,7 +46,6 @@ airflow/airflow.db
 
 # Docker
 .env
-docker-compose.yml
 docker-compose.override.yml
 
 # Logs
@@ -66,3 +65,8 @@ django-app/config/settings.py
 .env.aws
 .env.aws.IAM
 .yml
+
+#backup
+volumes/
+volumes.zip
+all_images.tar
