@@ -24,7 +24,7 @@ def _parameter_to_dict():
     parameter_info = dict()
 
     if ('--batch_date' in argv_list) and (getResolvedOptions(sys.argv, ['batch_date'])['batch_date'] != '$today'):
-        parameter_info['batch_date'] = getResolvedOptions(sys.argv, ['batch_date'])['batch_date']  # e.g., 2025-05-01
+        parameter_info['batch_date'] = getResolvedOptions(sys.argv, ['batch_date'])['batch_date'] # 2025-05-01
     else:
         parameter_info['batch_date'] = YESTERDAY_KST.strftime(DATE_FORMAT)
 
@@ -68,35 +68,40 @@ def _save_to_s3(df_result, date_info):
     output_path = f"{S3_SAVE_PATH}/year={year}/month={month}/day={day}/"
     print('> Writing to ', output_path)
 
-    df_single.write.mode('overwrite').option('header', 'true').csv(output_path)
+    df_single.write.mode('append').option('header', 'true').csv(output_path)
     job.commit()
 
     s3 = boto3.client('s3')
     bucket_name = 'newtypesup'
     prefix = f"etl/results/daily_cate_top5/year={year}/month={month}/day={day}/"
     response = s3.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
-
     print('> S3 objects:', response)
 
-    part_file_key = None
-    for obj in response.get('Contents', []):
-        if obj['Key'].endswith('.csv'):
-            part_file_key = obj['Key']
-            break
-
-    if part_file_key:
-        new_file_key = f"{prefix}{date_info.replace('-', '')}.csv"
-
-        original_obj = s3.get_object(Bucket=bucket_name, Key=part_file_key)
-        raw_data = original_obj['Body'].read()
-        data_with_bom = b'\xef\xbb\xbf' + raw_data
-
-        s3.put_object(Bucket=bucket_name, Key=new_file_key, Body=data_with_bom)
-        s3.delete_object(Bucket=bucket_name, Key=part_file_key)
-
-        print(f"> BOM added and file renamed: {part_file_key} → {new_file_key}")
-    else:
+    if 'Contents' not in response:
         print('No CSV file found in S3')
+        return
+
+    csv_files = [
+        obj for obj in response['Contents']
+        if obj['Key'].endswith('.csv') and obj['Key'].startswith(prefix + "part-")
+    ]
+    if not csv_files:
+        print('No part-*.csv files found in S3')
+        return
+
+    latest_file = max(csv_files, key=lambda x: x['LastModified'])
+    latest_key = latest_file['Key']
+
+    new_file_key = f"{prefix}{date_info.replace('-', '')}.csv"
+
+    original_obj = s3.get_object(Bucket=bucket_name, Key=latest_key)
+    raw_data = original_obj['Body'].read()
+    data_with_bom = b'\xef\xbb\xbf' + raw_data
+
+    s3.put_object(Bucket=bucket_name, Key=new_file_key, Body=data_with_bom)
+    s3.delete_object(Bucket=bucket_name, Key=latest_key)
+
+    print(f"> BOM added and file renamed: {latest_key} → {new_file_key}")
 
 if __name__ == "__main__":
     start_time = time.time()
