@@ -1,13 +1,21 @@
---테이블 설정
+--------------------------------------------------------------------------------------------------------------------
+--테이블 설정--
+--------------------------------------------------------------------------------------------------------------------
 create table df_input(ctnt_id bigint generated always as identity (start with 100000 increment by 1), ctnt_name varchar(255), cate_name varchar(255), age_ratings varchar(255), reg_date date default current_date, primary key(ctnt_id));
 create table df_category(cate_id int, parent_id int, cate_name varchar(255), age_ratings varchar(255), uid varchar(255), run_time date);
 create table df_content(ctnt_id bigint, cate_id int, ctnt_name varchar(255), reg_date date, uid varchar(255), run_time date);
 create table df_download(ctnt_id bigint, cnty_cd varchar(255), status varchar(255), date date, uid varchar(255), run_time date);
 
---드랍
+
+--------------------------------------------------------------------------------------------------------------------
+--드랍--
+--------------------------------------------------------------------------------------------------------------------
 drop table df_input, df_category, df_content, df_download;
 
---사전 데이터 입력
+
+--------------------------------------------------------------------------------------------------------------------
+--사전 데이터 입력--
+--------------------------------------------------------------------------------------------------------------------
 INSERT INTO df_input (ctnt_name, cate_name, age_ratings) VALUES ('카카오톡', '소셜 미디어', '전체이용가');
 INSERT INTO df_input (ctnt_name, cate_name, age_ratings) VALUES ('인스타그램', '소셜 미디어', '15세이용가');
 INSERT INTO df_input (ctnt_name, cate_name, age_ratings) VALUES ('페이스북', '소셜 미디어', '15세이용가');
@@ -110,87 +118,206 @@ INSERT INTO df_input (ctnt_name, cate_name, age_ratings) VALUES ('킹덤: 왕가
 INSERT INTO df_input (ctnt_name, cate_name, age_ratings) VALUES ('아키에이지 워', '게임', '18세이용가');
 
 
+--------------------------------------------------------------------------------------------------------------------
+--일간 카테고리별 다운로드 탑5--
+--------------------------------------------------------------------------------------------------------------------
+WITH daily_cate_top5 AS (
+  SELECT
+    a.cate_name,
+    b.ctnt_id,
+    b.ctnt_name,
+    c.date,
+    COUNT(b.ctnt_id) AS app_count,
+    ROW_NUMBER() OVER (PARTITION BY a.cate_name ORDER BY COUNT(b.ctnt_id) DESC) AS app_rank
+  FROM category a
+  JOIN content b ON a.uid = b.uid
+  JOIN download c ON b.uid = c.uid
+  WHERE c.status = 'SUCCESS'
+  AND c.date = DATE '$today'
+  GROUP BY a.cate_name, b.ctnt_id, b.ctnt_name, c.date
+)
+SELECT
+  dct5.app_rank,
+  dct5.cate_name,
+  dct5.ctnt_name,
+  dct5.app_count
+FROM daily_cate_top5 dct5
+WHERE dct5.app_rank <= 5;
 
---주간 게임 연령등급별 다운 실패 탑5 (전체이용가 제외)
-WITH recent_failures AS (
-    SELECT
-        b.ctnt_id,
-        a.age_ratings,
-        COUNT(*) AS fail_count
-    FROM df_download AS c
-    JOIN df_content AS b ON c.ctnt_id = b.ctnt_id AND c.uid = b.uid
-    JOIN df_category AS a ON b.cate_id = a.cate_id AND b.uid = a.uid
-    WHERE c.status = 'FAIL'
-      AND a.parent_id = '0'
-      AND c.date = '2025-07-01'
-      --AND c.date BETWEEN '$start_date' AND '$end_date'
-    GROUP BY b.ctnt_id, a.age_ratings
+
+--------------------------------------------------------------------------------------------------------------------
+--주간 카테고리별 다운로드 탑5--
+--------------------------------------------------------------------------------------------------------------------
+WITH weekly_cate_top5 AS (
+  SELECT
+    a.cate_name,
+    b.ctnt_id,
+    b.ctnt_name,
+    c.date,
+    COUNT(b.ctnt_id) AS app_count,
+    ROW_NUMBER() OVER (PARTITION BY a.cate_name ORDER BY COUNT(b.ctnt_id) DESC) AS app_rank
+  FROM category a
+  JOIN content b ON a.uid = b.uid
+  JOIN download c ON b.uid = c.uid
+  WHERE c.status = 'SUCCESS'
+  AND c.date BETWEEN  DATE '$start_date' AND DATE '$end_date'
+  GROUP BY a.cate_name, b.ctnt_id, b.ctnt_name, c.date
+)
+SELECT
+  wct5.app_rank,
+  wct5.cate_name,
+  wct5.ctnt_name,
+  wct5.app_count
+FROM weekly_cate_top5 wct5
+WHERE wct5.app_rank <= 5;
+
+
+--------------------------------------------------------------------------------------------------------------------
+--주간 연령 등급별 게임 다운로드 탑5 (전체이용가 제외)--
+--------------------------------------------------------------------------------------------------------------------
+WITH weekly_agerated_games AS (
+  SELECT
+    a.age_ratings,
+    b.ctnt_id,
+    b.ctnt_name,
+    COUNT(b.ctnt_id) AS download_count
+  FROM category a
+  JOIN content b ON a.cate_id = b.cate_id AND a.uid = b.uid
+  JOIN download c ON b.ctnt_id = c.ctnt_id AND b.uid = c.uid
+  WHERE c.status = 'SUCCESS'
+  AND a.parent_id = 0
+  AND c.date BETWEEN DATE '$start_date' AND DATE '$end_date'
+  GROUP BY a.age_ratings, b.ctnt_id, b.ctnt_name
 ),
-
-ranked_failures AS (
-    SELECT *,
-           ROW_NUMBER() OVER (PARTITION BY age_ratings ORDER BY fail_count DESC) AS rnk
-    FROM recent_failures
+weekly_game_rankings AS (
+  SELECT *, 
+    ROW_NUMBER() OVER (PARTITION BY age_ratings ORDER BY download_count DESC) AS app_rank
+  FROM weekly_agerated_games
 )
-
 SELECT
-	DISTINCT
-    rf.ctnt_id,
-    rf.age_ratings,
-    rf.fail_count,
-    b.ctnt_name
-FROM ranked_failures rf
-JOIN df_content b ON rf.ctnt_id = b.ctnt_id
-WHERE age_ratings != '전체이용가' AND rnk <= 5
-ORDER BY age_ratings, fail_count DESC;
+  DISTINCT
+  wgr.app_rank,
+  wgr.age_ratings,
+  wgr.ctnt_name,
+  wgr.download_count
+FROM weekly_game_rankings wgr
+WHERE age_ratings != '전체이용가' AND app_rank <= 5
+ORDER BY age_ratings ASC;
 
 
---일간 다운로드 탑5 한국제외
-
-WITH daily_top5_nk AS (
+--------------------------------------------------------------------------------------------------------------------
+--실시간 앱 다운로드 탑10(오리지널)--
+--------------------------------------------------------------------------------------------------------------------
+WITH prev_data AS (
     SELECT 
+        a.cate_name,
         b.ctnt_id,
         b.ctnt_name,
-        c.date,
-        COUNT(b.ctnt_id) AS app_count,
-        ROW_NUMBER() OVER (PARTITION BY c.date ORDER BY COUNT(b.ctnt_id) DESC) AS app_rank
-    FROM df_content b
-    JOIN df_download c ON b.uid = c.uid
-    WHERE c.cnty_cd != 'KOR'
-      AND c.status = 'SUCCESS'
-    GROUP BY b.ctnt_id, b.ctnt_name, c.date
-)
-
-SELECT
-    dt5.app_rank,
-    dt5.ctnt_name,
-    dt5.app_count
-FROM daily_top5_nk dt5
-WHERE dt5.app_rank <= 5
-  AND dt5.date = '2025-07-01';
-  --AND dt5.date = '$date';
-
---일간 다운로드 탑5 한국만
-
-WITH daily_top5_k AS (
+        b.reg_date,
+        COUNT(*) AS prev_count
+    FROM content b
+    JOIN category a 
+        ON b.cate_id = a.cate_id AND b.uid = a.uid
+    JOIN download c 
+        ON b.ctnt_id = c.ctnt_id AND b.uid = c.uid
+    WHERE c.status != 'FAIL'
+        AND c.run_time = parse_datetime('$prev_time', '%Y%m%d%H')
+    GROUP BY b.ctnt_id, b.ctnt_name, b.reg_date, a.cate_name
+),
+current_data AS (
     SELECT 
+        a.cate_name,
         b.ctnt_id,
         b.ctnt_name,
-        c.date,
-        COUNT(b.ctnt_id) AS app_count,
-        ROW_NUMBER() OVER (PARTITION BY c.date ORDER BY COUNT(b.ctnt_id) DESC) AS app_rank
-    FROM df_content b
-    JOIN df_download c ON b.uid = c.uid
-    WHERE c.cnty_cd = 'KOR'
-      AND c.status = 'SUCCESS'
-    GROUP BY b.ctnt_id, b.ctnt_name, c.date
+        b.reg_date,
+        COUNT(*) AS current_count
+    FROM content b
+    JOIN category a 
+        ON b.cate_id = a.cate_id AND b.uid = a.uid
+    JOIN download c 
+        ON b.ctnt_id = c.ctnt_id AND b.uid = c.uid
+    WHERE c.status != 'FAIL'
+        AND c.run_time = parse_datetime('$current_time', '%Y%m%d%H')
+    GROUP BY b.ctnt_id, b.ctnt_name, b.reg_date, a.cate_name
+),
+current_date AS (
+    SELECT DATE('$current_date') AS crt_date
 )
 
 SELECT
-    dt5.app_rank,
-    dt5.ctnt_name,
-    dt5.app_count
-FROM daily_top5_nk dt5
-WHERE dt5.app_rank <= 5
-  AND dt5.date = '2025-07-01';
-  --AND dt5.date = '$date';
+    cd.ctnt_id,
+    cd.ctnt_name,
+    cd.cate_name,
+    cd.reg_date,
+    current_count,
+    prev_count,
+    c.crt_date,
+    date_diff('day', cd.reg_date, c.crt_date) AS dates,
+    SQRT(date_diff('day', cd.reg_date, c.crt_date)) AS sqrt_current_date,
+    SQRT(date_diff('day', pd.reg_date, c.crt_date)) AS sqrt_prev_date,
+    (current_count / NULLIF(SQRT(date_diff('day', cd.reg_date, c.crt_date)), 0)) AS current_days,
+    (prev_count / NULLIF(SQRT(date_diff('day', pd.reg_date, c.crt_date)), 0)) AS prev_days,
+    ROUND(
+        (current_count / NULLIF(SQRT(date_diff('day', cd.reg_date, c.crt_date)), 0)) - 1, 
+        2
+    ) AS inc_index,
+    ROUND(
+        (
+            (current_count / NULLIF(SQRT(date_diff('day', cd.reg_date, c.crt_date)), 0)) -
+            (prev_count / NULLIF(SQRT(date_diff('day', pd.reg_date, c.crt_date)), 0))
+        ), 
+        2
+    ) AS diff_index,
+    GREATEST(
+        ROUND(
+            (current_count / NULLIF(SQRT(date_diff('day', cd.reg_date, c.crt_date)), 0)) - 1, 
+            2
+        ),
+        ROUND(
+            (
+                (current_count / NULLIF(SQRT(date_diff('day', cd.reg_date, c.crt_date)), 0)) -
+                (prev_count / NULLIF(SQRT(date_diff('day', pd.reg_date, c.crt_date)), 0))
+            ), 
+            2
+        )
+    ) AS result_index
+FROM current_data cd
+LEFT JOIN prev_data pd
+    ON cd.ctnt_id = pd.ctnt_id
+    AND cd.ctnt_name = pd.ctnt_name
+CROSS JOIN current_date c
+ORDER BY result_index DESC
+LIMIT 10;
+
+--------------------------------------------------------------------------------------------------------------------
+--실시간 앱 다운로드 탑10(쿼리 분리 & pyspark로 적용)--
+--------------------------------------------------------------------------------------------------------------------
+--Previous
+SELECT 
+    a.cate_name,
+    b.ctnt_id,
+    b.ctnt_name,
+    b.reg_date,
+    COUNT(*) AS prev_count
+FROM content b
+JOIN category a ON b.cate_id = a.cate_id AND b.uid = a.uid
+JOIN download c ON b.ctnt_id = c.ctnt_id AND b.uid = c.uid
+WHERE c.status != 'FAIL'
+  AND c.run_time = '$prev_time'
+GROUP BY b.ctnt_id, b.ctnt_name, b.reg_date, a.cate_name
+
+--current
+SELECT 
+    a.cate_name,
+    b.ctnt_id,
+    b.ctnt_name,
+    b.reg_date,
+    COUNT(*) AS current_count
+FROM content b
+JOIN category a ON b.cate_id = a.cate_id AND b.uid = a.uid
+JOIN download c ON b.ctnt_id = c.ctnt_id AND b.uid = c.uid
+WHERE c.status != 'FAIL'
+  AND c.run_time = '$current_time'
+GROUP BY b.ctnt_id, b.ctnt_name, b.reg_date, a.cate_name
+
+--------------------------------------------------------------------------------------------------------------------
