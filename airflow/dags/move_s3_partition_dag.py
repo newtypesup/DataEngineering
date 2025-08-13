@@ -1,3 +1,6 @@
+# S3의 partition을 바꾼 이유:
+# Query 비용 절감 및 Glue job 배치시 컬럼 인식이 원활하여 도중에 변경하였다.
+
 import re
 import boto3 #type: ignore
 from datetime import datetime
@@ -26,7 +29,7 @@ def move_s3_files():
             for obj in page.get('Contents', []):
                 old_key = obj['Key']
 
-                # 날짜 경로 추출: ex.25/06/01
+                # 날짜 경로 추출: ex.25/05/01
                 match = re.search(rf'etl/raw/{prefix_name}/(\d{{2}})/(\d{{2}})/(\d{{2}})/', old_key)
                 if not match:
                     continue
