@@ -158,9 +158,6 @@ function App() {
             ))}
           </select>
           <button type="submit">등 록</button>
-          <div className="bottom-buttons">
-            <button type="button">통 계</button>
-          </div>
         </form>
       </div>
     </div>
