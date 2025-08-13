@@ -15,11 +15,11 @@ default_args = {
     'on_failure_callback': slack_fail_alert,
 }
 
-def daily_cate_top5_job(job_name, **context):
+def weekly_agerated_games_top5_job(job_name, **context):
     dag_id = context['dag'].dag_id
     run_id = context['run_id']
 
-    # 실행 중인 동일 DAG 인스턴스 확인
+    # 실행 중인 동일 DAG 확인
     with create_session() as session:
         running_dagruns = session.query(DagRun).filter(
             DagRun.dag_id == dag_id,
@@ -28,7 +28,7 @@ def daily_cate_top5_job(job_name, **context):
         ).count()
 
     if running_dagruns > 0:
-        print(f"[{dag_id}] 실행 중인 다른 DAG 인스턴스 {running_dagruns}개 감지됨 → 120초 대기")
+        print(f"[{dag_id}] 실행 중인 다른 DAG {running_dagruns}개 감지됨 → 120초 대기")
         time.sleep(120)
         # 딜레이를 걸어둔 이유 :
         # 만약 단번에 많은 DAG를 실행할 경우, 현재 DAG가 Glue job을 호출하는 시간은 5초도 안된다. 
@@ -49,21 +49,21 @@ def daily_cate_top5_job(job_name, **context):
     print(f"Start Glue JobRunId: {job_run_id} for batch_date={execution_date}")
 
 with DAG(
-    dag_id='daily_cate_top5',
+    dag_id='weekly_agerated_games_top5',
     default_args=default_args,
-    start_date=datetime(2025, 5, 1, 9, 0, tzinfo=KST),
+    start_date=datetime(2025, 5, 5, 9, 10, tzinfo=KST),
     end_date=datetime(2025, 8, 1, 0, 0, tzinfo=KST),
-    schedule='0 9 * * *',  # 매일 오전 9시 KST
+    schedule='10 9 * * 1',  # 매주 월요일 오전 9시 10분 KST
     catchup=True,
-    max_active_runs=10,
-    tags=['daily', 'category', 'top5'],
+    max_active_runs=5,
+    tags=['weekly', 'agerated', 'games', 'top5'],
 ) as dag:
 
-    daily_cate_top5 = PythonOperator(
-        task_id='daily_cate_top5',
-        python_callable=daily_cate_top5_job,
-        op_args=['daily_cate_top5'],
+    weekly_agerated_games_top5 = PythonOperator(
+        task_id='weekly_agerated_games_top5',
+        python_callable=weekly_agerated_games_top5_job,
+        op_args=['weekly_agerated_games_top5'],
         provide_context=True,
     )
 
-    daily_cate_top5
+    weekly_agerated_games_top5
