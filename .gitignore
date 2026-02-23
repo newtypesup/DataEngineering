@@ -70,3 +70,5 @@ django-app/config/settings.py
 volumes/
 volumes.zip
 all_images.tar
+
+docker-compose(pre).yml
